@@ -1,4 +1,5 @@
 import ast
+import copy
 import dask
 import panel as pn
 import pandas as pd
@@ -17,6 +18,9 @@ from .control import Control
 from .utils import convert_widget, player_with_name_and_value, is_float, look_for_class
 from .compatibility import ccrs, gv, gf, has_cartopy, logger, has_crick_tdigest
 
+from xrspatial import aspect, curvature, hillshade, slope, viewshed
+from xrspatial.classify import equal_interval, natural_breaks
+from xrspatial.zonal import regions
 
 class Dashboard(SigSlot):
     """
@@ -90,6 +94,7 @@ class Dashboard(SigSlot):
                                        self._link_aggregation_selectors)
         self.control.fields.connect('x', self._link_aggregation_selectors)
         self.control.fields.connect('y', self._link_aggregation_selectors)
+        self.getFunc = self.control.spatial.getFunc 
 
         self.panel = pn.Column(self.control.panel,
                                pn.Row(self.plot_button,
@@ -235,6 +240,17 @@ class Dashboard(SigSlot):
                 self.control.style.upper_limit.value = str(round(c_lim_upper, 5))
 
             assign_opts = {dim: self.data[dim] for dim in sel_data.dims}
+
+            ## temporary fix to prevent inplace modification
+            sel_temp = copy.deepcopy(sel_data)
+
+            # Spatial-Analysis
+            spatialFunction = self.kwargs['function']
+            if spatialFunction and isinstance(sel_data, xr.DataArray) and len(sel_data.dims)==2:
+                spatialKwargs = self.control.spatial.spatial_kwargs
+                sel_temp = self.getFunc[spatialFunction](sel_temp, **spatialKwargs)
+
+            # sel_data = equal_interval(sel_data, 20)
             # Following tasks are happening here:
             # 1. assign_opts: reassignment of coords(if not done result in
             # errors for some of the selections in fields panel)
@@ -244,7 +260,7 @@ class Dashboard(SigSlot):
             # lower and upper limits
             # 4. active_tools: activate the tools required such as 'wheel_zoom',
             # 'pan'
-            graph = sel_data.assign_coords(
+            graph = sel_temp.assign_coords(
                 **assign_opts).hvplot.quadmesh(
                 **graph_opts).redim.range(**color_range).opts(
                 active_tools=['wheel_zoom', 'pan'])

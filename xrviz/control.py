@@ -5,6 +5,7 @@ from .display import Display
 from .describe import Describe
 from .fields import Fields
 from .style import Style
+from .spatial import Spatial
 from .coord_setter import CoordSetter
 from .compatibility import has_cartopy
 
@@ -57,6 +58,7 @@ class Control(SigSlot):
         self.fields = Fields(self.data)
         self.style = Style()
         self.coord_setter = CoordSetter(self.data)
+        self.spatial = Spatial()
         self.tabs = pn.Tabs(
             pn.Column(
                 pn.pane.Markdown(TEXT, margin=(0, 10)),
@@ -67,6 +69,7 @@ class Control(SigSlot):
             self.coord_setter.panel,
             self.fields.panel,
             self.style.panel,
+            self.spatial.panel,
             background='#f5f5f5',
             width_policy='max',
             tabs_location='left',
@@ -123,6 +126,7 @@ class Control(SigSlot):
         out = self.displayer.kwargs
         out.update(self.fields.kwargs)
         out.update(self.style.kwargs)
+        out.update(self.spatial.kwargs)
         if has_cartopy:
             out.update(self.projection.kwargs)
         return out
